@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
-  ArrowRight,
-  Users,
   TrendingUp,
   AlertCircle,
   Activity,
@@ -20,6 +18,7 @@ import {
 } from '../utils/sprintSimulation';
 import { calculateTeamCapacity } from '../utils/teamCapacity';
 import { DailyDisruption, DailyState, Story, DayOfWeek } from '../types';
+import TeamAvailabilityGrid from '../components/TeamAvailabilityGrid';
 
 const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -30,6 +29,7 @@ export default function SprintSimulationScreen() {
   const [currentStories, setCurrentStories] = useState<Story[]>([]);
   const [isReplanning, setIsReplanning] = useState(false);
   const [selectedSprint, setSelectedSprint] = useState(sprints[0] || null);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   // Initialize with first sprint
   useEffect(() => {
@@ -75,7 +75,6 @@ export default function SprintSimulationScreen() {
   }, [team, selectedSprint, dailyStates.length]);
 
   const currentDayState = dailyStates[currentDay - 1];
-  const previousDayState = currentDay > 1 ? dailyStates[currentDay - 2] : null;
 
   const handleNextDay = useCallback(() => {
     if (currentDay >= 5 || !currentDayState || !selectedSprint) return;
@@ -149,7 +148,7 @@ export default function SprintSimulationScreen() {
       setCurrentDay(currentDay + 1);
       setIsReplanning(false);
     }, 1000);
-  }, [currentDay, currentDayState, currentStories, team, selectedSprint, previousDayState, dailyStates]);
+  }, [currentDay, currentDayState, currentStories, team, selectedSprint, dailyStates]);
 
   const handlePreviousDay = () => {
     if (currentDay > 1) {
@@ -158,14 +157,13 @@ export default function SprintSimulationScreen() {
   };
 
   const handleDisruptionChange = (
-    memberId: string,
     field: keyof DailyDisruption,
     value: number | boolean
   ) => {
-    if (!currentDayState) return;
+    if (!currentDayState || !selectedMemberId) return;
 
     const updatedDisruptions = currentDayState.disruptions.map((d) =>
-      d.memberId === memberId ? { ...d, [field]: value } : d
+      d.memberId === selectedMemberId ? { ...d, [field]: value } : d
     );
 
     const updatedState: DailyState = {
@@ -177,6 +175,13 @@ export default function SprintSimulationScreen() {
     newDailyStates[currentDay - 1] = updatedState;
     setDailyStates(newDailyStates);
   };
+
+  // Auto-select first team member if none selected
+  useEffect(() => {
+    if (team.length > 0 && !selectedMemberId) {
+      setSelectedMemberId(team[0].id);
+    }
+  }, [team, selectedMemberId]);
 
   const handleBack = () => {
     setCurrentScreen('planning');
@@ -209,123 +214,123 @@ export default function SprintSimulationScreen() {
     : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <button
-              onClick={handleBack}
-              className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-            </button>
-            <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100">Sprint Simulation</h1>
-          </div>
-          <p className="text-slate-600 dark:text-slate-400 text-lg">
-            Experience the sprint day by day. See how AI adapts plans based on real-world disruptions.
-          </p>
-        </motion.div>
-
-        {/* Sprint Selector */}
-        {sprints.length > 1 && (
-          <div className="mb-6 bg-white dark:bg-slate-800 rounded-lg shadow-md p-4">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Select Sprint
-            </label>
-            <select
-              value={selectedSprint?.id || ''}
-              onChange={(e) => {
-                const sprint = sprints.find((s) => s.id === parseInt(e.target.value));
-                if (sprint) {
-                  setSelectedSprint(sprint);
-                  setCurrentDay(1);
-                  setDailyStates([]);
-                  setCurrentStories([]);
-                }
-              }}
-              className="w-full md:w-auto px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-            >
-              {sprints.map((sprint) => (
-                <option key={sprint.id} value={sprint.id}>
-                  {sprint.name} ({sprint.plannedPoints} pts)
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Day Timeline */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Sprint Timeline</h2>
-            <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <div className="flex items-center gap-2 mb-2">
               <button
-                onClick={handlePreviousDay}
-                disabled={currentDay === 1}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={handleBack}
+                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
               </button>
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Day {currentDay} of 5
-              </span>
-              <button
-                onClick={handleNextDay}
-                disabled={currentDay >= 5 || isReplanning}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ArrowRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              </button>
+              <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100">Sprint Simulation</h1>
             </div>
-          </div>
+            <p className="text-slate-600 dark:text-slate-400 text-lg">
+              Experience the sprint day by day. See how AI adapts plans based on real-world disruptions.
+            </p>
+          </motion.div>
 
-          <div className="flex gap-2">
-            {DAYS.map((day, index) => {
-              const dayNumber = index + 1;
-              const isActive = dayNumber === currentDay;
-              const isPast = dayNumber < currentDay;
-              const hasState = dailyStates[dayNumber - 1] !== undefined;
+          {/* Sprint Selector */}
+          {sprints.length > 1 && (
+            <div className="mb-6 bg-white dark:bg-slate-800 rounded-lg shadow-md p-4">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Select Sprint
+              </label>
+              <select
+                value={selectedSprint?.id || ''}
+                onChange={(e) => {
+                  const sprint = sprints.find((s) => s.id === parseInt(e.target.value));
+                  if (sprint) {
+                    setSelectedSprint(sprint);
+                    setCurrentDay(1);
+                    setDailyStates([]);
+                    setCurrentStories([]);
+                  }
+                }}
+                className="w-full md:w-auto px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+              >
+                {sprints.map((sprint) => (
+                  <option key={sprint.id} value={sprint.id}>
+                    {sprint.name} ({sprint.plannedPoints} pts)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
 
-              return (
-                <button
-                  key={day}
-                  onClick={() => {
-                    if (hasState || dayNumber <= currentDay) {
-                      setCurrentDay(dayNumber);
-                    }
-                  }}
-                  disabled={!hasState && dayNumber > currentDay}
-                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-lg scale-105'
-                      : isPast
-                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                      : hasState
-                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                      : 'bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 cursor-not-allowed'
-                  }`}
-                >
-                  <div className="text-center">
-                    <div className="text-sm">{day}</div>
-                    <div className="text-xs mt-1">Day {dayNumber}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </motion.div>
+        {/* Team Availability Grid - Full Width */}
+        {team.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 px-8"
+          >
+            <TeamAvailabilityGrid
+              team={team}
+              currentDay={currentDay}
+              selectedMemberId={selectedMemberId}
+              onMemberClick={setSelectedMemberId}
+              onDayClick={(dayNumber) => {
+                const hasState = dailyStates[dayNumber - 1] !== undefined;
+                if (hasState || dayNumber <= currentDay) {
+                  setCurrentDay(dayNumber);
+                }
+              }}
+              onPreviousDay={handlePreviousDay}
+              onNextDay={handleNextDay}
+              canNavigateNext={currentDay < 5 && dailyStates[currentDay] !== undefined}
+              isReplanning={isReplanning}
+              dailyStates={dailyStates.map((ds) => ({ day: ds.day, dayNumber: ds.dayNumber }))}
+              dailyDisruptions={(() => {
+                // Build disruptions map for all days
+                const disruptionsMap: Record<DayOfWeek, DailyDisruption[]> = {
+                  Mon: [],
+                  Tue: [],
+                  Wed: [],
+                  Thu: [],
+                  Fri: [],
+                };
+
+                // Initialize all days with default disruptions for all team members
+                DAYS.forEach((day) => {
+                  disruptionsMap[day] = team.map((member) => {
+                    // Find disruption for this day if it exists
+                    const dayState = dailyStates.find((ds) => ds.day === day);
+                    const disruption = dayState?.disruptions.find(
+                      (d) => d.memberId === member.id
+                    );
+
+                    // Return existing disruption or default
+                    return (
+                      disruption || {
+                        memberId: member.id,
+                        onCallPercent: 0,
+                        sickPercent: 0,
+                        supportWork: false,
+                        contextSwitched: false,
+                      }
+                    );
+                  });
+                });
+
+                return disruptionsMap;
+              })()}
+            />
+          </motion.div>
+        )}
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Left: Daily Metrics Dashboard */}
           <div className="lg:col-span-2 space-y-6">
             {metrics && (
@@ -467,78 +472,10 @@ export default function SprintSimulationScreen() {
             )}
           </div>
 
-          {/* Right: Team Board & Disruption Controls */}
+          {/* Right: Disruption Controls */}
           <div className="space-y-6">
-            {/* Team Day Board */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6"
-            >
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-                Team Availability
-              </h2>
-              <div className="space-y-3">
-                {team.map((member) => {
-                  const disruption = currentDayState?.disruptions.find(
-                    (d) => d.memberId === member.id
-                  );
-                  const effectiveAvailability = disruption
-                    ? calculateEffectiveCapacity([member], [disruption])
-                    : member.availability;
-
-                  return (
-                    <div
-                      key={member.id}
-                      className="border border-slate-200 dark:border-slate-700 rounded-lg p-3"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
-                          {member.name}
-                        </span>
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
-                          {Math.round(effectiveAvailability * 100)}% available
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                        <div
-                          className="bg-blue-500 dark:bg-blue-600 h-2 rounded-full transition-all"
-                          style={{ width: `${effectiveAvailability * 100}%` }}
-                        />
-                      </div>
-                      {disruption && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {disruption.onCallPercent > 0 && (
-                            <span className="text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 rounded">
-                              On-call
-                            </span>
-                          )}
-                          {disruption.sickPercent > 0 && (
-                            <span className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
-                              Sick
-                            </span>
-                          )}
-                          {disruption.supportWork && (
-                            <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded">
-                              Support
-                            </span>
-                          )}
-                          {disruption.contextSwitched && (
-                            <span className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded">
-                              Context-switched
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-
             {/* Daily Reality Controls */}
-            {currentDayState && (
+            {currentDayState && selectedMemberId && (
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -548,114 +485,105 @@ export default function SprintSimulationScreen() {
                   <Activity className="w-5 h-5 text-orange-500 dark:text-orange-400" />
                   Daily Reality Controls
                 </h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                   Inject real-world disruptions for {currentDayState.day}
                 </p>
-                <div className="space-y-4">
-                  {team.map((member) => {
-                    const disruption = currentDayState.disruptions.find(
-                      (d) => d.memberId === member.id
-                    );
-                    if (!disruption) return null;
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 italic">
+                  Click a team member in the grid to adjust their availability
+                </p>
+                {(() => {
+                  const selectedMember = team.find((m) => m.id === selectedMemberId);
+                  const disruption = currentDayState.disruptions.find(
+                    (d) => d.memberId === selectedMemberId
+                  );
+                  
+                  if (!selectedMember || !disruption) return null;
 
-                    return (
-                      <div
-                        key={member.id}
-                        className="border border-slate-200 dark:border-slate-700 rounded-lg p-4"
-                      >
-                        <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">
-                          {member.name}
-                        </h3>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                              On-call: {Math.round(disruption.onCallPercent * 100)}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="1"
-                              step="0.1"
-                              value={disruption.onCallPercent}
-                              onChange={(e) =>
-                                handleDisruptionChange(
-                                  member.id,
-                                  'onCallPercent',
-                                  parseFloat(e.target.value)
-                                )
-                              }
-                              className="w-full"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                              Sick/Unavailable: {Math.round(disruption.sickPercent * 100)}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="1"
-                              step="0.1"
-                              value={disruption.sickPercent}
-                              onChange={(e) =>
-                                handleDisruptionChange(
-                                  member.id,
-                                  'sickPercent',
-                                  parseFloat(e.target.value)
-                                )
-                              }
-                              className="w-full"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              id={`support-${member.id}`}
-                              checked={disruption.supportWork}
-                              onChange={(e) =>
-                                handleDisruptionChange(member.id, 'supportWork', e.target.checked)
-                              }
-                              className="rounded"
-                            />
-                            <label
-                              htmlFor={`support-${member.id}`}
-                              className="text-sm text-slate-700 dark:text-slate-300"
-                            >
-                              Support work
-                            </label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              id={`context-${member.id}`}
-                              checked={disruption.contextSwitched}
-                              onChange={(e) =>
-                                handleDisruptionChange(
-                                  member.id,
-                                  'contextSwitched',
-                                  e.target.checked
-                                )
-                              }
-                              className="rounded"
-                            />
-                            <label
-                              htmlFor={`context-${member.id}`}
-                              className="text-sm text-slate-700 dark:text-slate-300"
-                            >
-                              Context-switched
-                            </label>
-                          </div>
+                  return (
+                    <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                      <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        {selectedMember.name}
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                            On-call: {Math.round(disruption.onCallPercent * 100)}%
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            value={disruption.onCallPercent}
+                            onChange={(e) =>
+                              handleDisruptionChange('onCallPercent', parseFloat(e.target.value))
+                            }
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+                            Sick/Unavailable: {Math.round(disruption.sickPercent * 100)}%
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            value={disruption.sickPercent}
+                            onChange={(e) =>
+                              handleDisruptionChange('sickPercent', parseFloat(e.target.value))
+                            }
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="support-work"
+                            checked={disruption.supportWork}
+                            onChange={(e) =>
+                              handleDisruptionChange('supportWork', e.target.checked)
+                            }
+                            className="rounded"
+                          />
+                          <label
+                            htmlFor="support-work"
+                            className="text-sm text-slate-700 dark:text-slate-300"
+                          >
+                            Support work
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="context-switch"
+                            checked={disruption.contextSwitched}
+                            onChange={(e) =>
+                              handleDisruptionChange('contextSwitched', e.target.checked)
+                            }
+                            className="rounded"
+                          />
+                          <label
+                            htmlFor="context-switch"
+                            className="text-sm text-slate-700 dark:text-slate-300"
+                          >
+                            Context-switched
+                          </label>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })()}
               </motion.div>
             )}
           </div>
         </div>
+        </div>
+      </div>
 
-        {/* Re-planning Indicator */}
+      {/* Re-planning Indicator */}
         {isReplanning && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -677,3 +605,4 @@ export default function SprintSimulationScreen() {
     </div>
   );
 }
+
