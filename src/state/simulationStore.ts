@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { SimulationState, TeamMember, Epic, Sprint } from '../types';
 
 interface SimulationStore extends SimulationState {
@@ -18,22 +19,42 @@ const initialState: SimulationState = {
   sprints: [],
 };
 
-export const useSimulationStore = create<SimulationStore>((set) => ({
-  ...initialState,
-  setCurrentScreen: (screen) => set({ currentScreen: screen }),
-  addTeamMember: (member) => set((state) => ({
-    team: [...state.team, member],
-  })),
-  updateTeamMember: (id, updates) => set((state) => ({
-    team: state.team.map((m) => (m.id === id ? { ...m, ...updates } : m)),
-  })),
-  removeTeamMember: (id) => set((state) => ({
-    team: state.team.filter((m) => m.id !== id),
-  })),
-  setEpic: (epic) => set({ epic }),
-  setSprints: (sprints) => set({ sprints }),
-  reset: () => set(initialState),
-}));
+export const useSimulationStore = create<SimulationStore>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      setCurrentScreen: (screen) => set({ currentScreen: screen }),
+      addTeamMember: (member) => set((state) => ({
+        team: [...state.team, member],
+      })),
+      updateTeamMember: (id, updates) => set((state) => ({
+        team: state.team.map((m) => (m.id === id ? { ...m, ...updates } : m)),
+      })),
+      removeTeamMember: (id) => set((state) => ({
+        team: state.team.filter((m) => m.id !== id),
+      })),
+      setEpic: (epic) => set({ epic }),
+      setSprints: (sprints) => set({ sprints }),
+      reset: () => {
+        // Clear persisted data by setting to initial state
+        set(initialState);
+        // Also clear from localStorage
+        localStorage.removeItem('simulation-storage');
+      },
+    }),
+    {
+      name: 'simulation-storage',
+      // Only persist team, epic, and sprints - not currentScreen
+      partialize: (state) => ({
+        team: state.team,
+        epic: state.epic,
+        sprints: state.sprints,
+        // Don't persist currentScreen - always start at 'team' on reload
+        currentScreen: 'team' as const,
+      }),
+    }
+  )
+);
 
 
 
