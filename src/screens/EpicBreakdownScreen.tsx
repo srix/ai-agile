@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, FileText, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Sparkles, FileText, CheckCircle2, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useSimulationStore } from '../state/simulationStore';
 import { createEpicFromDescription } from '../utils/storyGenerator';
+import { isOpenAIConfigured } from '../services/openaiService';
 
 export default function EpicBreakdownScreen() {
   const { epic, setEpic, setCurrentScreen, team } = useSimulationStore();
@@ -10,6 +11,8 @@ export default function EpicBreakdownScreen() {
   const [epicDescription, setEpicDescription] = useState(epic?.description || '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEpic, setGeneratedEpic] = useState(epic);
+  const [error, setError] = useState<string | null>(null);
+  const [isUsingAI, setIsUsingAI] = useState(isOpenAIConfigured());
 
   const handleGenerateStories = async () => {
     if (!epicTitle.trim() || !epicDescription.trim()) {
@@ -18,12 +21,18 @@ export default function EpicBreakdownScreen() {
     }
 
     setIsGenerating(true);
-    // Simulate AI processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setError(null);
 
-    const newEpic = createEpicFromDescription(epicTitle, epicDescription);
-    setGeneratedEpic(newEpic);
-    setIsGenerating(false);
+    try {
+      const newEpic = await createEpicFromDescription(epicTitle, epicDescription, isUsingAI);
+      setGeneratedEpic(newEpic);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate stories';
+      setError(errorMessage);
+      console.error('Story generation error:', err);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleAcceptEpic = () => {
@@ -93,6 +102,28 @@ export default function EpicBreakdownScreen() {
                 placeholder="Describe the epic in detail. Include features, requirements, and any technical considerations..."
               />
             </div>
+            {!isOpenAIConfigured() && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-300 font-medium">
+                    OpenAI API key not configured
+                  </p>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
+                    Using rule-based generation. Add VITE_OPENAI_API_KEY to your .env file to enable AI-powered story generation.
+                  </p>
+                </div>
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-red-800 dark:text-red-300 font-medium">Generation Error</p>
+                  <p className="text-xs text-red-700 dark:text-red-400 mt-1">{error}</p>
+                </div>
+              </div>
+            )}
             <button
               onClick={handleGenerateStories}
               disabled={isGenerating || !epicTitle.trim() || !epicDescription.trim()}
@@ -101,12 +132,12 @@ export default function EpicBreakdownScreen() {
               {isGenerating ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Generating stories...
+                  {isUsingAI ? 'Generating stories with AI...' : 'Generating stories...'}
                 </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  Generate Stories with AI
+                  {isUsingAI ? 'Generate Stories with AI' : 'Generate Stories'}
                 </>
               )}
             </button>

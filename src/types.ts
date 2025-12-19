@@ -41,6 +41,41 @@ export interface SimulationState {
   sprints: Sprint[];
 }
 
+export type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri';
+
+export type AvailabilityStatus = 'available' | 'on-call' | 'sick' | 'support' | 'context-switched';
+
+export interface DailyDisruption {
+  memberId: string;
+  onCallPercent: number; // 0-1
+  sickPercent: number; // 0-1
+  supportWork: boolean;
+  contextSwitched: boolean;
+}
+
+export interface DailyState {
+  day: DayOfWeek;
+  dayNumber: number; // 1-5
+  disruptions: DailyDisruption[];
+  completedPoints: number;
+  inProgressPoints: number;
+  remainingPoints: number;
+  velocity: number;
+  confidence: number; // 0-100
+  aiLog: string[];
+}
+
+export interface SprintMetrics {
+  plannedPoints: number;
+  remainingPoints: number;
+  completedPoints: number;
+  inProgressPoints: number;
+  eta: number; // days remaining
+  confidence: number; // 0-100
+  velocity: number;
+  spilloverRisk: number; // 0-100
+}
+
 
 
 

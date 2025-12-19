@@ -1,6 +1,7 @@
 import { Story, Epic } from '../types';
+import { generateStoriesWithOpenAI, isOpenAIConfigured } from '../services/openaiService';
 
-// Rule-based story generation (v1 - deterministic)
+// Rule-based story generation (fallback - deterministic)
 export function generateStoriesFromEpic(epicDescription: string): Story[] {
   const stories: Story[] = [];
   const lowerDesc = epicDescription.toLowerCase();
@@ -92,8 +93,30 @@ export function generateStoriesFromEpic(epicDescription: string): Story[] {
   return stories;
 }
 
-export function createEpicFromDescription(title: string, description: string): Epic {
-  const stories = generateStoriesFromEpic(description);
+/**
+ * Creates an epic from description using AI if available, otherwise falls back to rule-based generation
+ */
+export async function createEpicFromDescription(
+  title: string,
+  description: string,
+  useAI: boolean = true
+): Promise<Epic> {
+  let stories: Story[];
+
+  // Try OpenAI if configured and requested
+  if (useAI && isOpenAIConfigured()) {
+    try {
+      stories = await generateStoriesWithOpenAI(title, description);
+    } catch (error) {
+      console.warn('OpenAI generation failed, falling back to rule-based:', error);
+      // Fallback to rule-based generation
+      stories = generateStoriesFromEpic(description);
+    }
+  } else {
+    // Use rule-based generation
+    stories = generateStoriesFromEpic(description);
+  }
+
   const totalPoints = stories.reduce((sum, story) => sum + story.points, 0);
 
   return {

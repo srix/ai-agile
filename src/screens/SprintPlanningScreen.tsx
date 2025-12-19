@@ -4,7 +4,7 @@ import { Calendar, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, TrendingUp,
 import { useSimulationStore } from '../state/simulationStore';
 import { planSprints } from '../utils/sprintPlanner';
 import { calculateTeamCapacity } from '../utils/teamCapacity';
-import { Sprint, Story } from '../types';
+import { Sprint } from '../types';
 
 export default function SprintPlanningScreen() {
   const { epic, team, sprints, setSprints, setCurrentScreen } = useSimulationStore();
@@ -29,50 +29,15 @@ export default function SprintPlanningScreen() {
     }
   }, [epic, team, plannedSprints.length, handleAutoPlan]);
 
-  const handleStoryMove = (storyId: string, fromSprintId: number, toSprintId: number) => {
-    if (fromSprintId === toSprintId) return;
-
-    const updatedSprints = plannedSprints.map((sprint) => {
-      if (sprint.id === fromSprintId) {
-        return {
-          ...sprint,
-          stories: sprint.stories.filter((s) => s.id !== storyId),
-          plannedPoints: sprint.plannedPoints - (sprint.stories.find((s) => s.id === storyId)?.points || 0),
-        };
-      }
-      if (sprint.id === toSprintId) {
-        const story = plannedSprints
-          .find((s) => s.id === fromSprintId)
-          ?.stories.find((s) => s.id === storyId);
-        if (story) {
-          return {
-            ...sprint,
-            stories: [...sprint.stories, { ...story, assignedSprint: toSprintId }],
-            plannedPoints: sprint.plannedPoints + story.points,
-          };
-        }
-      }
-      return sprint;
-    });
-
-    setPlannedSprints(updatedSprints);
-  };
+  // Future: Implement drag-and-drop story movement between sprints
+  // const handleStoryMove = (storyId: string, fromSprintId: number, toSprintId: number) => {
+  //   if (fromSprintId === toSprintId) return;
+  //   // Implementation for moving stories between sprints
+  // };
 
   const handleAcceptPlan = () => {
     setSprints(plannedSprints);
-    // Update epic with assigned sprints
-    if (epic) {
-      const updatedStories = epic.stories.map((story) => {
-        const assignedSprint = plannedSprints.find((s) =>
-          s.stories.some((s) => s.id === story.id)
-        );
-        return {
-          ...story,
-          assignedSprint: assignedSprint?.id,
-        };
-      });
-      // Note: We'd need to update epic in store, but for now we'll just proceed
-    }
+    // Epic stories will be updated with assigned sprints when we proceed
   };
 
   const handleContinue = () => {
