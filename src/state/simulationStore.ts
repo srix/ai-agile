@@ -32,3 +32,6 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
   reset: () => set(initialState),
 }));
 
+
+
+
