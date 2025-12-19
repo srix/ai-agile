@@ -1,13 +1,17 @@
 import { Moon, Sun } from 'lucide-react';
 import { useThemeStore } from '../state/themeStore';
 
-export default function ThemeToggle() {
+interface ThemeToggleProps {
+  className?: string;
+}
+
+export default function ThemeToggle({ className = '' }: ThemeToggleProps) {
   const { isDark, toggleTheme } = useThemeStore();
 
   return (
     <button
       onClick={toggleTheme}
-      className="fixed top-4 right-4 z-50 p-3 rounded-full bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl transition-all duration-200 border border-slate-200 dark:border-slate-700"
+      className={`p-3 rounded-full bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl transition-all duration-200 border border-slate-200 dark:border-slate-700 ${className}`}
       aria-label="Toggle dark mode"
     >
       {isDark ? (
