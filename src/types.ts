@@ -26,10 +26,19 @@ export interface Epic {
   totalPoints: number;
 }
 
+export interface Sprint {
+  id: number;
+  name: string;
+  stories: Story[];
+  plannedPoints: number;
+  capacity: number;
+}
+
 export interface SimulationState {
-  currentScreen: 'team' | 'epic' | 'sprint';
+  currentScreen: 'team' | 'epic' | 'planning' | 'sprint';
   team: TeamMember[];
   epic: Epic | null;
+  sprints: Sprint[];
 }
 
 

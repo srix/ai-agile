@@ -3,6 +3,7 @@ import { useSimulationStore } from './state/simulationStore';
 import { useThemeStore } from './state/themeStore';
 import TeamSetupScreen from './screens/TeamSetupScreen';
 import EpicBreakdownScreen from './screens/EpicBreakdownScreen';
+import SprintPlanningScreen from './screens/SprintPlanningScreen';
 import ThemeToggle from './components/ThemeToggle';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
       <ThemeToggle />
       {currentScreen === 'team' && <TeamSetupScreen />}
       {currentScreen === 'epic' && <EpicBreakdownScreen />}
+      {currentScreen === 'planning' && <SprintPlanningScreen />}
       {currentScreen === 'sprint' && (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-8 flex items-center justify-center">
           <div className="text-center">

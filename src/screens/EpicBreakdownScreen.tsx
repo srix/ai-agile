@@ -34,7 +34,7 @@ export default function EpicBreakdownScreen() {
 
   const handleContinue = () => {
     if (epic) {
-      setCurrentScreen('sprint');
+      setCurrentScreen('planning');
     }
   };
 
